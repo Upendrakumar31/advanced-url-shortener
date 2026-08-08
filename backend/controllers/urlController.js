@@ -32,6 +32,9 @@ export const createShortUrl = async (req, res) => {
     // optionalAuth middleware sets req.user if user is logged in
     const userId = req.user ? req.user._id : null;
 
+    console.log("Logged User:", req.user);
+    console.log("User ID:", userId);
+
     // ------------------------------------------
     // CUSTOM ALIAS REQUIRES LOGIN
     // ------------------------------------------
@@ -286,11 +289,15 @@ export const getUrlAnalytics = async (req, res) => {
 
 export const getUserUrls = async (req, res) => {
   try {
+    console.log("User:", req.user);
+
     const urls = await Url.find({
       user: req.user._id,
     }).sort({
       createdAt: -1,
     });
+
+    console.log("URLs:", urls);
 
     return res.status(200).json(urls);
   } catch (error) {
