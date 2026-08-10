@@ -5,18 +5,37 @@ import api from "../services/api";
 function MyLinks() {
   const [urls, setUrls] = useState([]);
 
-  useEffect(() => {
-    const fetchUrls = async () => {
-      try {
-        const res = await api.get("/my-links");
-        setUrls(res.data);
-      } catch (err) {
-        console.log(err.response?.data || err.message);
-      }
-    };
+  const fetchUrls = async () => {
+    try {
+      const res = await api.get("/my-links");
+      setUrls(res.data);
+    } catch (err) {
+      console.log(err.response?.data || err.message);
+    }
+  };
 
+  useEffect(() => {
     fetchUrls();
   }, []);
+
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this URL?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/${id}`);
+
+      setUrls((prev) => prev.filter((url) => url._id !== id));
+
+      alert("URL deleted successfully!");
+    } catch (err) {
+      console.log(err.response?.data || err.message);
+      alert("Failed to delete URL");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-10">
@@ -68,6 +87,13 @@ function MyLinks() {
                   >
                     Analytics
                   </Link>
+
+                  <button
+                    onClick={() => handleDelete(url._id)}
+                    className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}

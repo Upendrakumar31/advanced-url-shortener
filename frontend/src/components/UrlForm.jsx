@@ -4,9 +4,31 @@ import api from "../services/api";
 function UrlForm({ setResult }) {
   const [url, setUrl] = useState("");
   const [alias, setAlias] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const isValidUrl = (value) => {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!url.trim()) {
+      alert("Please enter a URL");
+      return;
+    }
+
+    if (!isValidUrl(url)) {
+      alert("Please enter a valid URL");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const res = await api.post("/shorten", {
@@ -22,7 +44,12 @@ function UrlForm({ setResult }) {
       setAlias("");
     } catch (err) {
       console.error(err.response?.data || err.message);
-      alert("Something went wrong!");
+
+      alert(
+        err.response?.data?.error || "Something went wrong!"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -30,12 +57,11 @@ function UrlForm({ setResult }) {
     <div className="bg-slate-800 rounded-2xl p-8 shadow-xl">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <input
-          type="url"
+          type="text"
           placeholder="Paste your long URL..."
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           className="w-full rounded-xl bg-slate-900 border border-slate-700 px-5 py-4 outline-none focus:border-blue-500"
-          required
         />
 
         <input
@@ -48,9 +74,10 @@ function UrlForm({ setResult }) {
 
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-semibold transition"
+          disabled={loading}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed py-4 rounded-xl font-semibold transition"
         >
-          Shorten URL
+          {loading ? "Shortening..." : "Shorten URL"}
         </button>
       </form>
     </div>

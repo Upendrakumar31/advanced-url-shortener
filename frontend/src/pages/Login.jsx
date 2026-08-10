@@ -5,6 +5,8 @@ import api from "../services/api";
 function Login() {
   const navigate = useNavigate();
 
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -20,6 +22,8 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    setLoading(true);
+
     try {
       await api.post("/api/auth/login", formData);
 
@@ -28,13 +32,14 @@ function Login() {
       navigate("/");
     } catch (err) {
       alert(err.response?.data?.message || "Login Failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center px-5">
       <div className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md">
-
         <h1 className="text-3xl font-bold text-white text-center">
           Welcome Back
         </h1>
@@ -64,9 +69,11 @@ function Login() {
           />
 
           <button
-            className="bg-blue-600 hover:bg-blue-700 rounded-xl py-4 font-semibold text-white"
+            type="submit"
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-xl py-4 font-semibold text-white transition"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
@@ -79,7 +86,6 @@ function Login() {
             Register
           </Link>
         </p>
-
       </div>
     </div>
   );
