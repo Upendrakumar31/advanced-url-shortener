@@ -25,7 +25,7 @@ function Login() {
     setLoading(true);
 
     try {
-      await api.post("/api/auth/login", formData);
+      await api.post("/auth/login", formData);
 
       alert("Login Successful!");
 
