@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
+  const { fetchUser } = useAuth();
 
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +29,9 @@ function Login() {
     try {
       await api.post("/auth/login", formData);
 
+      // Login ke baad user ko fetch karo
+      await fetchUser();
+
       alert("Login Successful!");
 
       navigate("/");
@@ -44,10 +49,7 @@ function Login() {
           Welcome Back
         </h1>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 flex flex-col gap-5"
-        >
+        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
           <input
             type="email"
             name="email"
@@ -79,10 +81,7 @@ function Login() {
 
         <p className="text-slate-400 text-center mt-6">
           Don't have an account?{" "}
-          <Link
-            to="/register"
-            className="text-blue-500 hover:underline"
-          >
+          <Link to="/register" className="text-blue-500 hover:underline">
             Register
           </Link>
         </p>
