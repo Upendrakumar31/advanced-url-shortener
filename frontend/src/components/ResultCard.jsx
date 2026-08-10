@@ -1,12 +1,14 @@
+import { toast } from "react-hot-toast";
+
 function ResultCard({ result }) {
   if (!result) return null;
 
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(result.shortUrl);
-      alert("Copied!");
+      toast.success("Copied to clipboard!");
     } catch (err) {
-      alert("Failed to copy.");
+      toast.error("Failed to copy.");
     }
   };
 
@@ -26,7 +28,7 @@ function ResultCard({ result }) {
             href={result.shortUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 mt-2 block break-all hover:underline"
+            className="text-blue-400 hover:underline break-all block mt-2"
           >
             {result.shortUrl}
           </a>
@@ -34,7 +36,7 @@ function ResultCard({ result }) {
 
         <button
           onClick={copyToClipboard}
-          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
+          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition"
         >
           Copy
         </button>

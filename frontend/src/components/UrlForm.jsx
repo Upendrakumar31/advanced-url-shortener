@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 import api from "../services/api";
 
 function UrlForm({ setResult }) {
@@ -19,12 +20,12 @@ function UrlForm({ setResult }) {
     e.preventDefault();
 
     if (!url.trim()) {
-      alert("Please enter a URL");
+      toast.error("Please enter a URL");
       return;
     }
 
     if (!isValidUrl(url)) {
-      alert("Please enter a valid URL");
+      toast.error("Please enter a valid URL");
       return;
     }
 
@@ -38,14 +39,14 @@ function UrlForm({ setResult }) {
 
       setResult(res.data);
 
-      alert("URL Shortened Successfully!");
+      toast.success("URL Shortened Successfully!");
 
       setUrl("");
       setAlias("");
     } catch (err) {
       console.error(err.response?.data || err.message);
 
-      alert(
+      toast.error(
         err.response?.data?.error || "Something went wrong!"
       );
     } finally {
