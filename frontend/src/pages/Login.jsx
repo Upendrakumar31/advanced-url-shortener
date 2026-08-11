@@ -27,7 +27,7 @@ function Login() {
     setLoading(true);
 
     try {
-      await api.post("/auth/login", formData);
+      await api.post("/api/auth/login", formData);
 
       // Login ke baad user ko fetch karo
       await fetchUser();

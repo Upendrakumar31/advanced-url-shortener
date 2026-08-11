@@ -8,7 +8,7 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post("/api/auth/logout");
 
       setUser(null);
 

@@ -3,9 +3,7 @@ import { nanoid } from "nanoid";
 import { redisClient } from "../config/redis.js";
 import { Queue } from "bullmq";
 
-// ==========================================
-// BULLMQ ANALYTICS QUEUE
-// ==========================================
+/* BULLMQ ANALYTICS QUEUE */
 
 const analyticsQueue = new Queue("analyticsQueue", {
   connection: {
@@ -14,30 +12,32 @@ const analyticsQueue = new Queue("analyticsQueue", {
   },
 });
 
-// ==========================================
-// POST: CREATE SHORT URL
-// ==========================================
+/* Create Short URL */
 
 export const createShortUrl = async (req, res) => {
   try {
     const { originalUrl, customAlias } = req.body;
 
-    // URL is required
+/* Validate Request */
+
     if (!originalUrl) {
       return res.status(400).json({
         error: "URL required",
       });
     }
+    try {
+        new URL(originalUrl);
+    } catch {
+        return res.status(400).json({
+        error: "Please enter a valid URL",
+        });
+    }
 
-    // optionalAuth middleware sets req.user if user is logged in
+/* Get Logged In User */
+
     const userId = req.user ? req.user._id : null;
 
-    console.log("Logged User:", req.user);
-    console.log("User ID:", userId);
-
-    // ------------------------------------------
-    // CUSTOM ALIAS REQUIRES LOGIN
-    // ------------------------------------------
+/* Custom Alias Requires Login */
 
     if (customAlias && !userId) {
       return res.status(401).json({
@@ -45,10 +45,8 @@ export const createShortUrl = async (req, res) => {
       });
     }
 
-    // ------------------------------------------
-    // CHECK CUSTOM ALIAS AVAILABILITY
-    // ------------------------------------------
-
+ /* Check Custom Alias */
+    
     if (customAlias) {
       const existingAlias = await Url.findOne({
         customAlias,
@@ -61,13 +59,11 @@ export const createShortUrl = async (req, res) => {
         });
       }
     }
-
-    // ------------------------------------------
-    // PREVENT DUPLICATE STANDARD URL
-    // ------------------------------------------
-    // If same user already shortened the same URL
-    // without a custom alias, return existing one.
-
+ 
+/*  Check Existing URL 
+    If same user already shortened the same URL
+    without a custom alias, return existing one. */
+     
     if (!customAlias) {
       const existingUrl = await Url.findOne({
         originalUrl,
@@ -80,32 +76,19 @@ export const createShortUrl = async (req, res) => {
       }
     }
 
-    // ------------------------------------------
-    // GENERATE SHORT ID
-    // ------------------------------------------
-
+/* Generate Short ID */
     const shortId = nanoid(7);
 
-    // If custom alias exists, use that in public URL.
-    // Otherwise use generated shortId.
+/* Generate Public URL */
     const finalIdentifier = customAlias
       ? customAlias
       : shortId;
 
-    // ------------------------------------------
-    // GENERATE BASE URL
-    // ------------------------------------------
+/* Generate Base URL */
 
-    const baseUrl =
-      process.env.NODE_ENV === "production"
-        ? "https://url-shortener-advanced.onrender.com"
-        : "http://localhost:5001";
+const shortUrl = `${process.env.BASE_URL}/${finalIdentifier}`;
 
-    const shortUrl = `${baseUrl}/${finalIdentifier}`;
-
-    // ------------------------------------------
-    // SAVE TO MONGODB
-    // ------------------------------------------
+/* Save URL */    
 
     const url = await Url.create({
       originalUrl,
@@ -125,30 +108,22 @@ export const createShortUrl = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET: REDIRECT SHORT URL
-// ==========================================
-// Redis is checked first.
-// MongoDB is used if cache miss occurs.
-// Click analytics is handled asynchronously
-// through BullMQ.
+/* Redirect to Original URL */
 
 export const redirectToOriginalUrl = async (req, res) => {
   try {
     const { shortId } = req.params;
 
-    // ==========================================
-    // STEP 1: CHECK REDIS CACHE
-    // ==========================================
+/* Check Redis Cache */
 
     const cachedData = await redisClient.get(shortId);
 
     if (cachedData) {
       try {
-        // New JSON cache format
+        /* Read Cached Data */
         const parsedCache = JSON.parse(cachedData);
 
-        // Send analytics job to BullMQ
+        /* Queue Analytics Job */
         analyticsQueue
           .add("trackClick", {
             shortId: parsedCache.trueId,
@@ -157,14 +132,10 @@ export const redirectToOriginalUrl = async (req, res) => {
             console.error("Queue Error:", err);
           });
 
-        // Redirect immediately
+        //* Redirect User */
         return res.redirect(parsedCache.originalUrl);
       } catch (error) {
-        // ------------------------------------------
-        // BACKWARD COMPATIBILITY
-        // ------------------------------------------
-        // If old Redis cache contains only URL string
-
+        /* Support Old Cache Format */
         analyticsQueue
           .add("trackClick", {
             shortId,
@@ -177,9 +148,7 @@ export const redirectToOriginalUrl = async (req, res) => {
       }
     }
 
-    // ==========================================
-    // STEP 2: REDIS MISS → CHECK MONGODB
-    // ==========================================
+/* Fetch from MongoDB */
 
     const url = await Url.findOne({
       $or: [
@@ -194,20 +163,16 @@ export const redirectToOriginalUrl = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // STEP 3: SAVE RESULT IN REDIS
-    // ==========================================
+/* Cache URL */
 
     const cachePayload = JSON.stringify({
       originalUrl: url.originalUrl,
 
-      // IMPORTANT:
-      // Worker updates MongoDB using actual shortId,
-      // not customAlias.
+      /* Store Actual Short ID */
       trueId: url.shortId,
     });
 
-    // Cache for 24 hours
+    /* Cache for 24 Hours */
     await redisClient.set(
       shortId,
       cachePayload,
@@ -216,10 +181,7 @@ export const redirectToOriginalUrl = async (req, res) => {
       }
     );
 
-    // ==========================================
-    // STEP 4: SEND CLICK EVENT TO BULLMQ
-    // ==========================================
-
+/* Queue Click Event */
     analyticsQueue
       .add("trackClick", {
         shortId: url.shortId,
@@ -228,10 +190,7 @@ export const redirectToOriginalUrl = async (req, res) => {
         console.error("Queue Error:", err);
       });
 
-    // ==========================================
-    // STEP 5: REDIRECT USER
-    // ==========================================
-
+/* Redirect */
     return res.redirect(url.originalUrl);
   } catch (error) {
     console.error("Redirect Error:", error);
@@ -242,13 +201,7 @@ export const redirectToOriginalUrl = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET: URL ANALYTICS
-// ==========================================
-// Works with BOTH:
-// 1. Generated shortId
-// 2. Custom alias
-// ==========================================
+/* Get URL Analytics */
 
 export const getUrlAnalytics = async (req, res) => {
   try {
@@ -283,9 +236,7 @@ export const getUrlAnalytics = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET: LOGGED-IN USER'S URLs
-// ==========================================
+/* Get User URLs */
 
 export const getUserUrls = async (req, res) => {
   try {
@@ -302,6 +253,43 @@ export const getUserUrls = async (req, res) => {
     return res.status(200).json(urls);
   } catch (error) {
     console.error("Get User URLs Error:", error);
+
+    return res.status(500).json({
+      error: "Server error",
+    });
+  }
+};
+export const deleteUrl = async (req, res) => {
+  try {
+    const url = await Url.findById(req.params.id);
+
+    if (!url) {
+      return res.status(404).json({
+        error: "URL not found",
+      });
+    }
+
+    if (url.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        error: "Not authorized",
+      });
+    }
+
+    await Url.findByIdAndDelete(req.params.id);
+
+    if (url.shortId) {
+      await redisClient.del(url.shortId);
+    }
+
+    if (url.customAlias) {
+      await redisClient.del(url.customAlias);
+    }
+
+    return res.status(200).json({
+      message: "URL deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete URL Error:", error);
 
     return res.status(500).json({
       error: "Server error",
