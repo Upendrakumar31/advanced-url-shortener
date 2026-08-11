@@ -36,11 +36,10 @@ const analyticsWorker = new Worker(
     }
   },
   {
-    connection: {
-      host: process.env.REDIS_HOST || "127.0.0.1",
-      port: 6379,
-    },
-  }
+  connection: {
+    url: process.env.REDIS_URL,
+  },
+}
 );
 
 /* Worker Events */
