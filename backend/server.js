@@ -34,40 +34,6 @@ app.use(cookieParser());
 app.use("/", urlRoutes);
 app.use("/api/auth", authRoutes);
 
-app.get("/test", (req, res) => {
-  res.json({
-    message: "Backend Working",
-  });
-});
-
-/* Debug - Print All Registered Routes */
-
-const printRoutes = () => {
-  console.log("\n========== REGISTERED ROUTES ==========");
-
-  app._router.stack.forEach((middleware) => {
-    if (middleware.route) {
-      console.log(
-        `${Object.keys(middleware.route.methods)
-          .join(",")
-          .toUpperCase()} ${middleware.route.path}`
-      );
-    } else if (middleware.name === "router") {
-      middleware.handle.stack.forEach((handler) => {
-        if (handler.route) {
-          console.log(
-            `${Object.keys(handler.route.methods)
-              .join(",")
-              .toUpperCase()} ${handler.route.path}`
-          );
-        }
-      });
-    }
-  });
-
-  console.log("=======================================\n");
-};
-
 /* Start Server */
 
 const startServer = async () => {
@@ -77,9 +43,6 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
-
-      /* Print all routes after server starts */
-      printRoutes();
     });
   } catch (error) {
     console.error(`Server failed to start: ${error.message}`);
