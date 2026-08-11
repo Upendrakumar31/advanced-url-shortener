@@ -7,8 +7,7 @@ import { Queue } from "bullmq";
 
 const analyticsQueue = new Queue("analyticsQueue", {
   connection: {
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    port: 6379,
+    url: process.env.REDIS_URL,
   },
 });
 
